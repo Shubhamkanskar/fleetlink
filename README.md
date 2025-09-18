@@ -162,12 +162,6 @@ estimatedRideDurationHours =
 - **Error Handling**: Comprehensive error messages and recovery
 - **Toast Notifications**: Modern notification system
 
-### 5. **Admin Features**
-
-- **Admin Dashboard**: Statistics and management tools
-- **Vehicle Management**: Admin can manage all vehicles
-- **Booking Oversight**: View and manage all bookings
-- **User Management**: Admin controls and permissions
 
 ### 6. **Advanced Validation**
 
@@ -262,13 +256,12 @@ npm run dev
 
 For testing and development purposes, you can use these pre-configured user accounts:
 
-#### Admin User
-
+#### Regular User
 - **Email**: `shubhamkanaskar75@gmail.com`
 - **Password**: `Shubham@2344`
 - **Role**: Admin (full system access)
 
-#### Regular User
+
 
 - **Email**: `manasi@gmail.com`
 - **Password**: `Shubham@2344`
@@ -276,44 +269,7 @@ For testing and development purposes, you can use these pre-configured user acco
 
 > **Note**: These are test credentials for development purposes. In production, ensure proper user registration and secure password policies.
 
-### Making a User Admin
 
-To make any user an admin in the database, update the `role` field in the User collection:
-
-#### Using MongoDB Compass or MongoDB Shell:
-
-```javascript
-// Connect to your MongoDB database
-use fleetlink
-
-// Update user to admin role
-db.users.updateOne(
-  { email: "user@example.com" },
-  { $set: { role: "admin" } }
-)
-
-// Verify the change
-db.users.findOne({ email: "user@example.com" }, { role: 1, email: 1 })
-```
-
-#### Using Mongoose in Node.js:
-
-```javascript
-const User = require("./src/models/User");
-
-// Update user to admin
-await User.updateOne({ email: "user@example.com" }, { role: "admin" });
-
-// Or find and update
-const user = await User.findOne({ email: "user@example.com" });
-user.role = "admin";
-await user.save();
-```
-
-#### Available Roles:
-
-- `"user"` - Standard user (default)
-- `"admin"` - Administrator with full system access
 
 ## 📁 Project Structure
 

@@ -18,7 +18,7 @@ export const vehicleFormSchema = z.object({
         .number()
         .int('Capacity must be a whole number')
         .min(1, 'Capacity must be at least 1 kg')
-        .max(50000, 'Capacity cannot exceed 50,000 kg'),
+        .max(3000, 'Capacity cannot exceed 3,000 kg'),
     tyres: z
         .number()
         .int('Number of tyres must be a whole number')
@@ -34,7 +34,7 @@ export const vehicleSearchSchema = z.object({
         .number()
         .int('Capacity must be a whole number')
         .min(1, 'Capacity must be at least 1 kg')
-        .max(50000, 'Capacity cannot exceed 50,000 kg')
+        .max(3000, 'Capacity cannot exceed 3,000 kg')
         .optional(),
     fromPincode: z
         .string()
@@ -141,7 +141,7 @@ export const vehicleUpdateSchema = z.object({
         .number()
         .int('Capacity must be a whole number')
         .min(1, 'Capacity must be at least 1 kg')
-        .max(50000, 'Capacity cannot exceed 50,000 kg')
+        .max(3000, 'Capacity cannot exceed 3,000 kg')
         .optional(),
     tyres: z
         .number()

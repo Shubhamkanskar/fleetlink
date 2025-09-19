@@ -71,6 +71,13 @@ const UserVehicleForm = () => {
   };
 
   /**
+   * Test toast notification
+   */
+  const testToast = () => {
+    toast.success("Toast notifications are working! 🎉");
+  };
+
+  /**
    * Handle form submission
    * @param {Event} e - Form event
    */
@@ -228,11 +235,12 @@ const UserVehicleForm = () => {
                   id="capacityKg"
                   name="capacityKg"
                   type="number"
-                  placeholder="e.g., 1000"
+                  placeholder="e.g., 1000 (max: 3000)"
                   value={formData.capacityKg}
                   onChange={handleInputChange}
                   required
                   min="1"
+                  max="3000"
                   className={`w-full ${
                     getFieldError(validationErrors, "capacityKg")
                       ? "border-red-500"
@@ -292,6 +300,15 @@ const UserVehicleForm = () => {
                     disabled={isSubmitting}
                   >
                     Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    onClick={testToast}
+                    className="flex-1"
+                    disabled={isSubmitting}
+                  >
+                    Test Toast
                   </Button>
                   <Button
                     type="submit"

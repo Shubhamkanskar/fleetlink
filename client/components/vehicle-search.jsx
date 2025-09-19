@@ -63,7 +63,7 @@ const VehicleSearch = () => {
   const [validationErrors, setValidationErrors] = useState({});
 
   /**
-   * Handle filter change
+   * Handle filter change with real-time validation
    * @param {Event} e - Input event
    */
   const handleFilterChange = (e) => {
@@ -80,6 +80,70 @@ const VehicleSearch = () => {
         [name]: null,
       }));
     }
+
+    // Real-time validation with toast notifications
+    validateField(name, value);
+  };
+
+  /**
+   * Validate individual field and show toast if error
+   * @param {string} fieldName - Field name
+   * @param {string} value - Field value
+   */
+  const validateField = (fieldName, value) => {
+    if (!value) return; // Don't validate empty fields
+
+    switch (fieldName) {
+      case "capacityRequired":
+        const capacity = parseInt(value);
+        if (isNaN(capacity)) {
+          toast.error("Capacity must be a valid number");
+          return;
+        }
+        if (capacity < 1) {
+          toast.error("Capacity must be at least 1 kg");
+          return;
+        }
+        if (capacity > 3000) {
+          toast.error("Capacity cannot exceed 3,000 kg (3 tons)");
+          return;
+        }
+        break;
+
+      case "fromPincode":
+      case "toPincode":
+        if (value) {
+          // Check for non-numeric characters
+          if (!/^\d*$/.test(value)) {
+            toast.error("Pincode can only contain numbers (0-9)");
+            return;
+          }
+          // Check length
+          if (value.length > 0 && value.length < 6) {
+            toast.error("Pincode must be exactly 6 digits");
+            return;
+          }
+          if (value.length > 6) {
+            toast.error("Pincode cannot exceed 6 digits");
+            return;
+          }
+        }
+        break;
+
+      case "startTime":
+        if (value) {
+          const date = new Date(value);
+          if (isNaN(date.getTime())) {
+            toast.error("Please select a valid date and time");
+            return;
+          }
+          if (date <= new Date()) {
+            toast.error("Start time must be in the future");
+            return;
+          }
+        }
+        break;
+    }
   };
 
   /**
@@ -89,6 +153,18 @@ const VehicleSearch = () => {
     setIsLoading(true);
     setError(null);
     setValidationErrors({});
+
+    // Check if at least one filter is provided
+    const hasFilters =
+      filters.capacityRequired ||
+      filters.fromPincode ||
+      filters.toPincode ||
+      filters.startTime;
+    if (!hasFilters) {
+      toast.warning("Please provide at least one search filter");
+      setIsLoading(false);
+      return;
+    }
 
     try {
       // Prepare data for validation
@@ -106,6 +182,40 @@ const VehicleSearch = () => {
       if (!validation.success) {
         setValidationErrors(validation.errors);
         setIsLoading(false);
+
+        // Show specific toast for each validation error
+        const errors = validation.errors;
+        if (errors.capacityRequired) {
+          if (errors.capacityRequired.includes("exceed")) {
+            toast.error(
+              "Capacity too high! Maximum allowed is 3,000 kg (3 tons)"
+            );
+          } else if (errors.capacityRequired.includes("at least")) {
+            toast.error("Capacity too low! Minimum required is 1 kg");
+          } else {
+            toast.error("Invalid capacity value. Please enter a valid number");
+          }
+        } else if (errors.fromPincode || errors.toPincode) {
+          toast.error("Invalid pincode format! Must be exactly 6 digits");
+        } else if (errors.startTime) {
+          if (errors.startTime.includes("future")) {
+            toast.error(
+              "Cannot select past date! Please choose a future date and time"
+            );
+          } else if (errors.startTime.includes("format")) {
+            toast.error(
+              "Invalid date format! Please select a valid date and time"
+            );
+          } else {
+            toast.error("Invalid date selection. Please try again");
+          }
+        } else if (errors.toPincode && errors.toPincode.includes("required")) {
+          toast.error(
+            "Both from and to pincodes are required when searching by location"
+          );
+        } else {
+          toast.error("Please check your input and try again");
+        }
         return;
       }
 
@@ -169,6 +279,13 @@ const VehicleSearch = () => {
   };
 
   /**
+   * Test toast notification
+   */
+  const testToast = () => {
+    toast.success("Search toast notifications are working! 🔍");
+  };
+
+  /**
    * Clear all filters
    */
   const clearFilters = () => {
@@ -181,6 +298,8 @@ const VehicleSearch = () => {
     setVehicles([]);
     setSearchResults({ vehicles: [], estimatedRideDurationHours: 0 });
     setError(null);
+    setValidationErrors({});
+    toast.info("Search filters cleared");
   };
 
   /**
@@ -315,9 +434,11 @@ const VehicleSearch = () => {
                       id="capacityRequired"
                       name="capacityRequired"
                       type="number"
-                      placeholder="e.g., 1000"
+                      placeholder="e.g., 1000 (max: 3000)"
                       value={filters.capacityRequired}
                       onChange={handleFilterChange}
+                      min="1"
+                      max="3000"
                       className={`pl-10 ${
                         getFieldError(validationErrors, "capacityRequired")
                           ? "border-red-500"
@@ -346,6 +467,8 @@ const VehicleSearch = () => {
                           : ""
                       }`}
                       maxLength="6"
+                      pattern="[0-9]*"
+                      inputMode="numeric"
                     />
                   </div>
                   {getFieldError(validationErrors, "fromPincode") && (
@@ -375,6 +498,8 @@ const VehicleSearch = () => {
                           : ""
                       }`}
                       maxLength="6"
+                      pattern="[0-9]*"
+                      inputMode="numeric"
                     />
                   </div>
                   {getFieldError(validationErrors, "toPincode") && (
@@ -395,6 +520,14 @@ const VehicleSearch = () => {
                     }
                     onChange={(date) => {
                       if (date) {
+                        // Check if date is in the past
+                        if (date <= new Date()) {
+                          toast.error(
+                            "Cannot select past date! Please choose a future date and time"
+                          );
+                          return;
+                        }
+
                         handleFilterChange({
                           target: {
                             name: "startTime",
@@ -438,6 +571,9 @@ const VehicleSearch = () => {
                       Search Availability
                     </>
                   )}
+                </Button>
+                <Button type="button" variant="secondary" onClick={testToast}>
+                  Test Toast
                 </Button>
                 <Button type="button" variant="outline" onClick={clearFilters}>
                   Clear Filters

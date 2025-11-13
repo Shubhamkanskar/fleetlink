@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>QR Audio Scanner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+
+        #reader {
+            width: 100%;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        #reader video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .status.info {
+            background: #e3f2fd;
+            color: #1976d2;
+            border: 1px solid #bbdefb;
+        }
+
+        .status.success {
+            background: #e8f5e9;
+            color: #388e3c;
+            border: 1px solid #c8e6c9;
+        }
+
+        .status.error {
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        .status.warning {
+            background: #fff3e0;
+            color: #f57c00;
+            border: 1px solid #ffe0b2;
+        }
+
+        .result {
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+            border-left: 4px solid #667eea;
+        }
+
+        .result.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-label {
+            color: #666;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .result-text {
+            color: #333;
+            font-size: 14px;
+            word-break: break-all;
+            line-height: 1.5;
+        }
+
+        .audio-player {
+            margin-top: 15px;
+            display: none;
+        }
+
+        .audio-player.show {
+            display: block;
+            animation: slideIn 0.3s ease;
+        }
+
+        audio {
+            width: 100%;
+            border-radius: 8px;
+            outline: none;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 8px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .footer {
+            margin-top: 20px;
+            text-align: center;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 12px;
+        }
+
+        #qr-shaded-region {
+            border: 2px solid #667eea !important;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 QR Audio Scanner</h1>
+        <p class="subtitle">Point your camera at a QR code to play audio</p>
+
+        <div id="status" class="status info">
+            <span class="loader"></span>Initializing camera...
+        </div>
+
+        <div id="reader"></div>
+
+        <div id="result" class="result">
+            <div class="result-label">QR Code Detected</div>
+            <div class="result-text" id="result-text"></div>
+        </div>
+
+        <div id="audio-container" class="audio-player">
+            <audio id="audio-player" controls preload="auto"></audio>
+        </div>
+
+        <button id="restart-btn" class="btn btn-primary hidden">Scan Another QR Code</button>
+    </div>
+
+    <div class="footer">
+        Powered by html5-qrcode • FleetLink
+    </div>
+
+    <!-- html5-qrcode library -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <script>
+        let html5QrcodeScanner;
+        let isScanning = true;
+        let lastScannedCode = '';
+
+        // Audio mapping - can be extended with more QR codes and audio files
+        const audioMap = {
+            'welcome': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3', // Example MP3
+            'default': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3'  // Default fallback
+        };
+
+        // Status helper functions
+        function updateStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${type}`;
+            statusEl.innerHTML = type === 'info' && message.includes('Initializing')
+                ? `<span class="loader"></span>${message}`
+                : message;
+        }
+
+        function showResult(text) {
+            const resultEl = document.getElementById('result');
+            const resultTextEl = document.getElementById('result-text');
+            resultTextEl.textContent = text;
+            resultEl.classList.add('show');
+        }
+
+        function hideResult() {
+            const resultEl = document.getElementById('result');
+            resultEl.classList.remove('show');
+        }
+
+        // Audio playback function
+        function playAudio(qrCodeData) {
+            const audioContainer = document.getElementById('audio-container');
+            const audioPlayer = document.getElementById('audio-player');
+
+            // Determine which audio to play based on QR code data
+            let audioUrl = audioMap.default;
+
+            // Check if QR code data matches any key in audioMap
+            for (const key in audioMap) {
+                if (qrCodeData.toLowerCase().includes(key)) {
+                    audioUrl = audioMap[key];
+                    break;
+                }
+            }
+
+            // Set audio source and play
+            audioPlayer.src = audioUrl;
+            audioContainer.classList.add('show');
+
+            // Play the audio
+            audioPlayer.play()
+                .then(() => {
+                    updateStatus('🎵 Playing audio message...', 'success');
+                })
+                .catch((error) => {
+                    console.error('Audio playback error:', error);
+                    updateStatus('⚠️ Unable to play audio. Please check your device settings.', 'warning');
+                });
+        }
+
+        // QR Code scan success handler
+        function onScanSuccess(decodedText, decodedResult) {
+            // Prevent multiple scans of the same code
+            if (decodedText === lastScannedCode) {
+                return;
+            }
+
+            lastScannedCode = decodedText;
+
+            // Stop scanning
+            if (isScanning) {
+                html5QrcodeScanner.pause(true);
+                isScanning = false;
+            }
+
+            // Show result
+            showResult(decodedText);
+            updateStatus('✅ QR Code detected successfully!', 'success');
+
+            // Play audio
+            playAudio(decodedText);
+
+            // Show restart button
+            document.getElementById('restart-btn').classList.remove('hidden');
+        }
+
+        // QR Code scan failure handler (optional, for debugging)
+        function onScanFailure(error) {
+            // Ignore scan failures - they're normal when no QR code is in view
+            // console.log(`QR scan error: ${error}`);
+        }
+
+        // Initialize scanner
+        function initializeScanner() {
+            const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0,
+                rememberLastUsedCamera: true,
+                supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_CAMERA]
+            };
+
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader",
+                config,
+                /* verbose= */ false
+            );
+
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+
+            // Update status after a short delay
+            setTimeout(() => {
+                updateStatus('📷 Point camera at QR code', 'info');
+            }, 1000);
+        }
+
+        // Restart scanning
+        function restartScanning() {
+            lastScannedCode = '';
+            isScanning = true;
+            hideResult();
+
+            const audioContainer = document.getElementById('audio-container');
+            const audioPlayer = document.getElementById('audio-player');
+            audioPlayer.pause();
+            audioPlayer.src = '';
+            audioContainer.classList.remove('show');
+
+            document.getElementById('restart-btn').classList.add('hidden');
+
+            html5QrcodeScanner.resume();
+            updateStatus('📷 Point camera at QR code', 'info');
+        }
+
+        // Event listeners
+        document.getElementById('restart-btn').addEventListener('click', restartScanning);
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                // Pause scanning when page is hidden
+                if (html5QrcodeScanner && isScanning) {
+                    html5QrcodeScanner.pause();
+                }
+            } else {
+                // Resume scanning when page is visible
+                if (html5QrcodeScanner && isScanning) {
+                    html5QrcodeScanner.resume();
+                }
+            }
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            // Check for camera support
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                updateStatus('❌ Camera not supported on this device', 'error');
+                return;
+            }
+
+            // Request camera permission and initialize scanner
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(() => {
+                    initializeScanner();
+                })
+                .catch((error) => {
+                    console.error('Camera permission error:', error);
+                    updateStatus('❌ Camera access denied. Please enable camera permissions.', 'error');
+                });
+        });
+
+        // Prevent page zoom on mobile
+        document.addEventListener('touchmove', (event) => {
+            if (event.scale !== 1) {
+                event.preventDefault();
+            }
+        }, { passive: false });
+    </script>
+</body>
+</html>
